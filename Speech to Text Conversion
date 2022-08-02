@@ -1,0 +1,20 @@
+import speech_recognition as sr
+file=open("E:\\nptel\Deep Learning\Deep Learning.txt", "a")
+r=sr.Recognizer()
+
+with sr.Microphone(device_index=(1)) as source:
+    r.energy_threshold=40
+    r.adjust_for_ambient_noise(source)
+    audio=r.listen(source)
+    
+try:
+    text=r.recognize_google(audio)
+    file.write("\n"+text)
+    file.close()
+   # file.write("Hello")
+    print("Audio contains---" +text)
+    
+except sr.UnknownValueError:
+    print("Google couldn't understand audio")
+except sr.RequestError:
+    print("Couldn't get results from Google")
