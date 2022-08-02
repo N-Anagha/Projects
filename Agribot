@@ -1,0 +1,260 @@
+#define ENA   D5      // Enable/speed motors Right        GPIO14(D5)
+#define ENB   D6          // Enable/speed motors Left         GPIO12(D6)
+#define m1p1  D8          // L298N in1 motors Right           GPIO15(D8)
+#define m1p2  D7          // L298N in2 motors Right           GPIO13(D7)
+#define m2p1  D4          // L298N in3 motors Left            GPIO2(D4)
+#define m2p2  D3    
+  
+
+#include <ESP8266WiFi.h>
+#include<Servo.h>
+Servo s;
+Servo s1;
+Servo s2;
+int speedcar=300;
+const char* ssid = "AndroidAPBAE5";
+const char* password = "tiss1409"; 
+ 
+
+const int buzz=D0;
+int Sensor= A0; // Soil Sensor input at Analog PIN A0
+int value= 0;
+
+WiFiServer server(80);
+ 
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+  pinMode(3,FUNCTION_3);
+  s.attach(D1);
+  s1.attach(3);
+  s2.attach(D2);
+  s.write(180);
+  s1.write(10);
+  s2.write(0);
+
+  pinMode(ENB,OUTPUT);
+  pinMode(ENA,OUTPUT);
+  pinMode(m1p1,OUTPUT);
+  pinMode(m1p2,OUTPUT);
+  pinMode(m2p1,OUTPUT);
+  pinMode(m2p2,OUTPUT);
+  pinMode(buzz,OUTPUT);
+
+  digitalWrite(ENB,LOW);
+  digitalWrite(ENA,LOW);
+  digitalWrite(m1p1,LOW);
+  digitalWrite(m1p2,LOW);
+  digitalWrite(m2p1,LOW);
+  digitalWrite(m2p2,LOW);
+
+ 
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+ 
+  WiFi.begin(ssid, password);
+ 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+ 
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL to connect: ");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
+ 
+}
+ 
+void loop() {
+  // Check if a client has connected
+  analogWrite(ENA,speedcar);
+  analogWrite(ENB,speedcar);
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+ 
+  // Wait until the client sends some data
+  Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+ 
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+ 
+  // Match the request
+ 
+  int val = LOW;
+  if (request.indexOf("/CAR=OFF") != -1)  {
+    Serial.println("CAR off page");
+  digitalWrite(m1p1, LOW);
+  digitalWrite(m1p2, LOW);
+
+  digitalWrite(m2p1, LOW);
+  digitalWrite(m2p2, LOW);
+  val = LOW;
+  delay(1);
+    
+  }
+  
+  if (request.indexOf("/CAR=RIGHT") != -1)  {
+    Serial.println("Change to Right");
+  analogWrite(ENA,speedcar);
+  analogWrite(ENB,speedcar);
+  digitalWrite(m1p1, HIGH);
+  digitalWrite(m1p2, LOW);
+  
+
+  
+  digitalWrite(m2p1, HIGH);  
+  digitalWrite(m2p2, LOW);
+  
+
+  val=HIGH;
+  delay(1);  
+  }
+  if (request.indexOf("/CAR=LEFT") != -1)  {
+    Serial.println("Change to Left");
+  analogWrite(ENA,speedcar);
+  analogWrite(ENB,speedcar);
+  digitalWrite(m1p1, LOW);
+  digitalWrite(m1p2, HIGH);
+  
+
+  
+  digitalWrite(m2p1, LOW);
+  digitalWrite(m2p2, HIGH);
+  
+
+  val=HIGH;
+  delay(1);  
+  }
+  if (request.indexOf("/CAR=ON(F)") != -1)  {
+    Serial.println("CAR is On");
+    analogWrite(ENA,1000);
+    analogWrite(ENB,1000);  
+  digitalWrite(m1p1, HIGH);
+  digitalWrite(m1p2, LOW);
+
+  
+  digitalWrite(m2p1, LOW);
+  digitalWrite(m2p2, HIGH);
+  
+
+  val=HIGH;
+  delay(1);  
+  }
+
+  if (request.indexOf("/CAR=ON(B)") != -1)  {
+    Serial.println("CAR is On");
+  analogWrite(ENA,1000);
+  analogWrite(ENB,1000);
+  digitalWrite(m1p1, LOW);
+  digitalWrite(m1p2, HIGH);
+  
+
+  digitalWrite(m2p1, HIGH);
+  digitalWrite(m2p2, LOW);
+  
+
+  val=HIGH;
+  delay(1);  
+  }
+
+  if(request.indexOf("/CAR=MoistureCheck")!=-1){
+  
+    digitalWrite(m1p1, LOW);
+    digitalWrite(m1p2, LOW);
+    digitalWrite(m2p1, LOW);
+    digitalWrite(m2p2, LOW);
+    Serial.print("MOISTURE LEVEL : ");
+    s.write(0);
+   value= analogRead(Sensor);
+    delay(5000);
+   
+   // value= value/10;
+   Serial.println(value);
+   if(value>750)
+   {
+    digitalWrite(buzz,HIGH);
+    delay(200);
+    digitalWrite(buzz,LOW);
+   }
+   s.write(180);
+   delay(1);
+  }
+
+   if(request.indexOf("/CAR=PloughandPlant")!=-1){
+  
+    s2.write(180);
+      delay(2000);
+      s1.write(90);
+      //delay(2000);
+      analogWrite(ENA,speedcar);
+  analogWrite(ENB,speedcar);
+  digitalWrite(m1p1, HIGH);
+  digitalWrite(m1p2, LOW);
+  digitalWrite(m2p1, LOW);
+  digitalWrite(m2p2, HIGH);
+  delay(4000);
+    s2.write(0);
+  
+    s1.write(10);
+    
+    analogWrite(ENA,speedcar);
+  analogWrite(ENB,speedcar);
+  digitalWrite(m1p1, LOW);
+  digitalWrite(m1p2, LOW);
+  digitalWrite(m2p1, LOW);
+  digitalWrite(m2p2, LOW);
+   }
+  
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+ 
+  client.print("CAR is now: ");
+ 
+  if(val == HIGH) {
+    client.print("On");
+  } else {
+    client.print("Off");
+  }
+  client.println("<head>");
+  client.println("<title>");
+  client.println("WELCOME");
+  client.println("</title>");
+  client.println("</head>");
+  client.println("<br><br>");
+  client.println("<a href=\"/CAR=ON(B)\"\"><button>On(B) </button></a>");
+  client.println("<a href=\"/CAR=ON(F)\"\"><button>On(F) </button></a>");
+  client.println("<a href=\"/CAR=OFF\"\"><button>Off </button></a><br />");  
+  client.println("<a href=\"/CAR=LEFT\"\"><button>Left </button></a><br />");  
+  client.println("<a href=\"/CAR=RIGHT\"\"><button>Right </button></a><br />");  
+  client.println("<a href=\"/CAR=MoistureCheck\"\"><button>Moisture Check </button></a><br />");  
+  client.println("<a href=\"/CAR=PloughandPlant\"\"><button>PloughandPlant</button></a><br />");   
+  client.println("</body>");
+  client.println("</html>");
+ 
+  delay(1);
+  Serial.println("Client disconnected");
+  Serial.println("");
+ 
+}
